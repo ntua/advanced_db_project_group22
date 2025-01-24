@@ -67,20 +67,20 @@ crimes_schema = StructType([
     StructField("lon", FloatType(), True)               # Γεωγραφικό μήκος
 ])
 
-# Φόρτωση δεδομένων από S3
-df1 = spark.read.csv(
-    "s3://initial-notebook-data-bucket-dblab-905418150721/CrimeData/Crime_Data_from_2010_to_2019_20241101.csv",
+# Φόρτωση δεδομένων 
+crimes_df1 = spark.read.csv(
+    "/mnt/F23209033208CE93/Ε.Μ.Π/Εξάμηνα/2024 Χειμερινό εξάμηνο/Προχωρημένα Θέματα Βάσεων Δεδομένων/εργασια/data/CrimeData/Crime_Data_from_2010_to_2019_20241101.csv",
     header=True,
     schema=crimes_schema
 )
-df2 = spark.read.csv(
-    "s3://initial-notebook-data-bucket-dblab-905418150721/CrimeData/Crime_Data_from_2020_to_Present_20241101.csv",
+crimes_df2 = spark.read.csv(
+    "/mnt/F23209033208CE93/Ε.Μ.Π/Εξάμηνα/2024 Χειμερινό εξάμηνο/Προχωρημένα Θέματα Βάσεων Δεδομένων/εργασια/data/CrimeData/Crime_Data_from_2020_to_Present_20241101.csv",
     header=True,
     schema=crimes_schema
 )
 
 # Ενοποίηση των δύο DataFrames
-crimes_df = df1.union(df2)
+crimes_df = crimes_df1.union(crimes_df2)
 
 # Μετατροπή DataFrame σε RDD
 crimes_rdd = crimes_df.rdd

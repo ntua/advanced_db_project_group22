@@ -1,0 +1,27 @@
+field,type,meaning
+BG10,string,7-digit block group number (2010)
+BG10FIP10,string,Combination of BG10 and LA_FIP10 (Los Angeles County FIP code)
+BG12,string,7-digit block group number (2012)
+CB10,string,4-digit census block number
+CEN_FIP13,string,-
+CITY,string,Incorporated city name
+CITYCOM,string,City/Community name label
+COMM,string,Unincorporated area community name and LA City neighborhood, also known as "CSA"
+CT10,string,6-digit census tract number (2010)
+CT12,string,6-digit census tract number (2012)
+CTCB10,string,Combination of CT10 and CB10 (4-digit census block number)
+HD_2012,long,Health District number
+HD_NAME,string,Health District name
+HOUSING10,long,2010 housing (PL 94-171 Redistricting Data Summary File - Total Housing)
+LA_FIP10,string,Los Angeles County FIP code
+OBJECTID,long,-
+POP_2010,long,Population (PL 94-171 Redistricting Data Summary File - Total Population)
+PUMA10,string,-
+SPA_2012,long,Service Planning Area number (2012)
+SPA_NAME,string,Service Planning Area name
+SUP_DIST,string,Supervisorial District number
+SUP_LABEL,string,Supervisorial District label
+ShapeSTArea,double,-
+ShapeSTLength,double,-
+ZCTA10,string,Zip Code Tabulation Area 
+geometry,geometry,Geometry of the block

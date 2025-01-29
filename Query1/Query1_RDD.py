@@ -1,3 +1,4 @@
+# Εισαγωγή απαραίτητων βιβλιοθηκών
 import time
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructField, StructType, IntegerType, FloatType, StringType
@@ -85,7 +86,7 @@ crimes_df = crimes_df1.union(crimes_df2)
 # Μετατροπή DataFrame σε RDD
 crimes_rdd = crimes_df.rdd
 
-# Φιλτράρισμα περιστατικών που περιέχουν "AGGRAVATED ASSAULT" στη στήλη περιγραφής
+# Φιλτράρισμα περιστατικών που περιέχουν "AGGRAVATED ASSAULT" 
 aggr_assault_rdd = crimes_rdd.filter(lambda row: 
     row.crm_cd_desc is not None and "AGGRAVATED ASSAULT" in row.crm_cd_desc.upper()
 )
@@ -99,10 +100,10 @@ counts_rdd = age_groups_rdd.reduceByKey(lambda x, y: x + y)
 # Ταξινόμηση αποτελεσμάτων σε φθίνουσα σειρά
 sorted_rdd = counts_rdd.sortBy(lambda x: x[1], ascending=False)
 
-# Συλλογή αποτελεσμάτων (προσοχή σε μεγάλα datasets)
+# Συλλογή αποτελεσμάτων 
 results = sorted_rdd.collect()
 
-# Εμφάνιση αποτελεσμάτων
+# Προβολή αποτελεσμάτων
 print("Age Group | Count")
 for (age_grp, cnt) in results:
     print(f"{age_grp}\t{cnt}")

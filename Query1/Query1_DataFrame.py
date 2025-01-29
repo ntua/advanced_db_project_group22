@@ -4,14 +4,15 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import StructField, StructType, IntegerType, FloatType, StringType
 from pyspark.sql.functions import col, when
 
+# ============== ΑΡΧΗ: Μέτρηση χρόνου ==============
+start_time_df = time.time()
+# ================================================
+
 # Δημιουργία SparkSession
 spark = SparkSession \
     .builder \
     .appName("Crime Data Processing") \
     .getOrCreate()
-
-# Έναρξη χρονομέτρησης για την εκτέλεση
-start_time_df = time.time()
 
 # Ορισμός schema για τα δεδομένα εγκλημάτων
 crimes_schema = StructType([
@@ -77,12 +78,11 @@ age_group_counts_df = aggravated_assault_df.groupBy("age_group").count()
 # Ταξινόμηση των αποτελεσμάτων σε φθίνουσα σειρά με βάση την καταμέτρηση
 age_group_counts_sorted_df = age_group_counts_df.orderBy(col("count").desc())
 
-# Τερματισμός χρονομέτρησης
-end_time_df = time.time()
-elapsed_df = end_time_df - start_time_df
-
 # Προβολή αποτελεσμάτων
 age_group_counts_sorted_df.show()
 
-# Εμφάνιση χρόνου εκτέλεσης
+# ============== ΤΕΛΟΣ: Μέτρηση χρόνου ==============
+end_time_df = time.time()
+elapsed_df = end_time_df - start_time_df
 print(f"Elapsed time for DataFrame API execution: {elapsed_df:.2f} seconds.")
+# ================================================

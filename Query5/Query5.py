@@ -1,33 +1,23 @@
+# Εισαγωγή απαραίτητων βιβλιοθηκών
 import time
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import (
     col, regexp_replace, when, expr, row_number, desc, avg, count as spark_count
 )
-from pyspark.sql.types import (
-    StructType, StructField, StringType,
-    IntegerType, FloatType, DoubleType
-)
+from pyspark.sql.types import StructField, StructType, IntegerType, FloatType, StringType, DoubleType
 
 # Sedona Imports
 from sedona.spark import SedonaContext
 from sedona.register import SedonaRegistrator
 
-##########################################################
-# Query 5 - Full Code (ίδιο στυλ με Query3-Full-Code)
-# -------------------------------------------------------
-# Στόχος: "Να υπολογιστεί, ανά αστυνομικό τμήμα, ο αριθμός
-# εγκλημάτων που έλαβαν χώρα πλησιέστερα σε αυτό, καθώς
-# και η μέση απόστασή τους. Τα αποτελέσματα ταξινομημένα
-# κατά αριθμό περιστατικών (φθίνουσα)".
-##########################################################
-
-# 1) Δημιουργία SparkSession + Sedona (ίδια config, κλπ.)
+# ============== ΑΡΧΗ: Μέτρηση χρόνου ==============
 start_time = time.time()
+# ================================================
 
+# 1) Δημιουργία SparkSession + Sedona 
 spark = (
     SparkSession.builder
     .appName("Query5-Full-Code")
-    # Εδώ προσαρμόζουμε τα paths στα Sedona jars, όπως στο Query3-Full-Code
     .config("spark.jars", "/jars/sedona-spark-shaded-3.5_2.12-1.6.1.jar,/jars/geotools-wrapper-1.6.1-28.2.jar")
     .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     .config("spark.kryo.registrator", "org.apache.sedona.core.serde.SedonaKryoRegistrator")
@@ -37,9 +27,7 @@ spark = (
 sedona = SedonaContext.create(spark)
 SedonaRegistrator.registerAll(spark)
 
-##########################################################
-# 2) Φόρτωση Crime Data (CSV)
-##########################################################
+# Ορισμός schema για τα δεδομένα εγκλημάτων
 crimes_schema = StructType([
     StructField("DR_NO", StringType(), True),
     StructField("Date Rptd", StringType(), True),
@@ -71,7 +59,7 @@ crimes_schema = StructType([
     StructField("LON", FloatType(), True)
 ])
 
-# Διαβάζουμε δύο CSV για crimes
+# Φόρτωση δεδομένων 
 crimes_df1 = spark.read.csv(
     "/mnt/F23209033208CE93/Ε.Μ.Π/Εξάμηνα/2024 Χειμερινό εξάμηνο/Προχωρημένα Θέματα Βάσεων Δεδομένων/εργασια/data/CrimeData/Crime_Data_from_2010_to_2019_20241101.csv",
     header=True,
@@ -83,7 +71,7 @@ crimes_df2 = spark.read.csv(
     schema=crimes_schema
 )
 
-# Ενώνουμε (union)
+# Ενοποίηση των δύο DataFrames
 crimes_df = crimes_df1.union(crimes_df2)
 
 # Φιλτράρουμε null συντεταγμένες
@@ -91,15 +79,13 @@ crimes_df = crimes_df.filter(
     (col("LAT").isNotNull()) & (col("LON").isNotNull())
 )
 
-# ST_Point (lon, lat)
+# Προσθέτουμε γεωμετρική στήλη ST_Point
 crimes_df = crimes_df.withColumn(
     "geom_crime",
     expr("ST_Point(LON, LAT)")
 )
 
-##########################################################
-# 3) Φόρτωση LA_Police_Stations.csv
-##########################################################
+# Φόρτωση LA_Police_Stations.csv
 stations_schema = """
 X DOUBLE,
 Y DOUBLE,
@@ -122,9 +108,7 @@ stations_df = stations_df.withColumn(
     expr("ST_Point(X, Y)")
 )
 
-##########################################################
-# 4) Cross Join -> υπολογισμός απόστασης crime - station
-##########################################################
+# Cross Join -> υπολογισμός απόστασης crime - station
 # Επειδή τα station είναι λίγα, μπορούμε να πούμε hint("BROADCAST")
 joined_df = crimes_df.crossJoin(
     stations_df.hint("BROADCAST")
@@ -136,9 +120,7 @@ joined_df = crimes_df.crossJoin(
 # Μετατρέπουμε σε km (προαιρετικά)
 joined_df = joined_df.withColumn("distance_km", col("distance_m")/1000.0)
 
-##########################################################
-# 5) Εύρεση πλησιέστερου station (Window row_number)
-##########################################################
+# Εύρεση πλησιέστερου station (Window row_number)
 from pyspark.sql.window import Window
 from pyspark.sql.functions import row_number
 
@@ -150,10 +132,7 @@ closest_df = joined_df.withColumn(
 ).filter(col("rank") == 1)
 
 # Τώρα κάθε crime έχει columns: (DR_NO, DIVISION, distance_km, ...)
-
-##########################################################
-# 6) Ομαδοποίηση ανά station -> count, avg(distance)
-##########################################################
+# Ομαδοποίηση ανά station -> count, avg(distance)
 from pyspark.sql.functions import avg, count as spark_count
 
 station_crimes_df = closest_df.groupBy("DIVISION").agg(
@@ -161,19 +140,17 @@ station_crimes_df = closest_df.groupBy("DIVISION").agg(
     avg("distance_km").alias("avg_distance_km")
 )
 
-##########################################################
-# 7) Ταξινόμηση φθίνουσα σε crime_count
-##########################################################
+# Ταξινόμηση φθίνουσα σε crime_count
 result_df = station_crimes_df.orderBy(col("crime_count").desc())
 
-##########################################################
-# 8) Προβολή αποτελεσμάτων
-##########################################################
+# Προβολή αποτελεσμάτων
 result_df.show(50, truncate=False)
 
+# ============== ΤΕΛΟΣ: Μέτρηση χρόνου ==============
 end_time = time.time()
 elapsed = end_time - start_time
 print(f"Query 5 completed in {elapsed:.2f} seconds.")
+# ================================================
 
 # Αν θες .explain():
 result_df.explain()

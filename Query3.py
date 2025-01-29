@@ -1,37 +1,20 @@
-#########################################################
-# Query 3 - Full Code
-# Υπολογισμός:
-#   - Μέσο Ετήσιο Εισόδημα ανά Άτομο
-#   - Αναλογία (συνολικού αριθμού) Εγκλημάτων ανά Άτομο
-# ανά περιοχή (COMM) της πόλης Los Angeles.
-#
-# Εφαρμογή των στρατηγικών Join:
-#   BROADCAST, MERGE, SHUFFLE_HASH, SHUFFLE_REPLICATE_NL
-# με .hint() & .explain(), σε τουλάχιστον ένα join.
-#########################################################
-
+# Εισαγωγή απαραίτητων βιβλιοθηκών
 import time
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import (
     col, regexp_replace, when, expr,
     sum as spark_sum, count
 )
-from pyspark.sql.types import (
-    StructType, StructField,
-    StringType, IntegerType, FloatType
-)
+from pyspark.sql.types import StructField, StructType, IntegerType, FloatType, StringType
 
 # Sedona Imports
 from sedona.spark import SedonaContext
 from sedona.register import SedonaRegistrator
 
-##########################################
-# 1) Δημιουργία SparkSession + Sedona
-##########################################
+# Δημιουργία SparkSession + Sedona
 spark = (
     SparkSession.builder
     .appName("Query3-Full-Code")
-    # Ρύθμιση jars για Sedona (προσαρμόστε paths)
     .config("spark.jars", "/jars/sedona-spark-shaded-3.5_2.12-1.6.1.jar,/jars/geotools-wrapper-1.6.1-28.2.jar")
     .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     .config("spark.kryo.registrator", "org.apache.sedona.core.serde.SedonaKryoRegistrator")
@@ -41,9 +24,7 @@ spark = (
 sedona = SedonaContext.create(spark)
 SedonaRegistrator.registerAll(spark)
 
-##########################################
-# 2) Φόρτωση Crime Data (CSV)
-##########################################
+# Ορισμός schema για τα δεδομένα εγκλημάτων
 crimes_schema = StructType([
     StructField("DR_NO", StringType(), True),
     StructField("Date Rptd", StringType(), True),
@@ -75,7 +56,7 @@ crimes_schema = StructType([
     StructField("LON", FloatType(), True)
 ])
 
-# Παράδειγμα paths τοπικά
+# Φόρτωση δεδομένων 
 crimes_df1 = spark.read.csv(
     "/mnt/F23209033208CE93/Ε.Μ.Π/Εξάμηνα/2024 Χειμερινό εξάμηνο/Προχωρημένα Θέματα Βάσεων Δεδομένων/εργασια/data/CrimeData/Crime_Data_from_2010_to_2019_20241101.csv",
     header=True,
@@ -86,6 +67,8 @@ crimes_df2 = spark.read.csv(
     header=True,
     schema=crimes_schema
 )
+
+# Ενοποίηση των δύο DataFrames
 crimes_df = crimes_df1.union(crimes_df2)
 
 # Φιλτράρουμε null συντεταγμένες
@@ -100,10 +83,8 @@ crimes_geom_df = crimes_df.withColumn(
     expr("ST_Point(LON, LAT)")
 )
 
-##########################################
-# 3) Φόρτωση 2010_Census_Blocks.geojson
-#    Φιλτράρουμε CITY='Los Angeles'
-##########################################
+# Φόρτωση 2010_Census_Blocks.geojson
+# Φιλτράρουμε CITY='Los Angeles'
 geojson_path = "/mnt/F23209033208CE93/Ε.Μ.Π/Εξάμηνα/2024 Χειμερινό εξάμηνο/Προχωρημένα Θέματα Βάσεων Δεδομένων/εργασια/data/2010_Census_Blocks.geojson"
 
 blocks_raw_df = (spark.read.format("geojson")
@@ -127,32 +108,24 @@ census_df = census_df.filter(
     (col("POP_2010") > 0)
 )
 
-##########################################
-# 4) Join γεωχωρικό (ST_Within)
-##########################################
+# Join γεωχωρικό (ST_Within)
 joined_spatial_df = crimes_geom_df.join(
     census_df,
     expr("ST_Within(geom, geom_polygon)"),
     "left"
 )
 
-##########################################
-# 5) Ομαδοποίηση εγκλημάτων ανά ZCTA10
-##########################################
+# Ομαδοποίηση εγκλημάτων ανά ZCTA10
 crime_by_zip_df = joined_spatial_df.groupBy("ZCTA10").agg(
     count("*").alias("crime_count")
 )
 
-##########################################
-# 6) Πληθυσμός ανά (ZCTA10, COMM)
-##########################################
+# Πληθυσμός ανά (ZCTA10, COMM)
 pop_by_zip_comm = census_df.groupBy("ZCTA10","COMM").agg(
     spark_sum("POP_2010").alias("pop_2010")
 )
 
-##########################################
-# 7) Φόρτωση εισοδήματος (CSV)
-##########################################
+# Φόρτωση εισοδήματος (CSV)
 income_schema = """
 Zip_Code STRING,
 Community STRING,
@@ -170,10 +143,8 @@ income_df = income_df.withColumn(
     regexp_replace(col("Estimated_Median_Income"), "[$,]", "").cast("float")
 )
 
-##########################################
-# 8) Δοκιμή 4 στρατηγικών JOIN σε
-#    pop_by_zip_comm.join(crime_by_zip_df)
-##########################################
+# Δοκιμή 4 στρατηγικών JOIN σε
+# pop_by_zip_comm.join(crime_by_zip_df)
 # Φτιάχνουμε 4 DataFrames, το καθένα με άλλο hint,
 # κατόπιν .explain(), .show(), κ.λπ.
 from pyspark.sql.functions import lit
@@ -185,7 +156,10 @@ hints = ["BROADCAST", "MERGE", "SHUFFLE_HASH", "SHUFFLE_REPLICATE_NL"]
 
 for strategy in hints:
     print(f"=== TEST JOIN with hint({strategy}) ===")
+    
+    # ============== ΑΡΧΗ: Μέτρηση χρόνου ==============
     start_time = time.time()
+    # ================================================
 
     # Κάνουμε join με το συγκεκριμένο hint
     df_test_join = pop_by_zip_comm.join(
@@ -206,9 +180,11 @@ for strategy in hints:
     df_test_join_count = df_test_join.count()
     print(f"Join DF row count: {df_test_join_count}")
 
+    # ============== ΤΕΛΟΣ: Μέτρηση χρόνου ==============
     end_time = time.time()
     elapsed = end_time - start_time
     print(f"[{strategy} Join] Elapsed time: {elapsed:.2f} secs\n")
+    # ================================================
 
 # Τώρα επιλέγουμε π.χ. BROADCAST ή MERGE (ό,τι μας συμφέρει)
 # ας πούμε pop_crime_df = df_test_join χωρίς hint κλπ.
@@ -224,9 +200,7 @@ pop_crime_df = pop_by_zip_comm.join(
     crime_by_zip_df["crime_count"]
 )
 
-##########################################
-# 9) Συνδυασμός με εισοδήματα
-##########################################
+# Συνδυασμός με εισοδήματα
 pop_crime_income_df = pop_crime_df.join(
     income_df, pop_crime_df.ZCTA10 == income_df.Zip_Code, "left"
 ).select(
@@ -237,9 +211,7 @@ pop_crime_income_df = pop_crime_df.join(
     income_df["Estimated_Median_Income"]
 )
 
-##########################################
-# 10) Ομαδοποίηση τελική ανά COMM
-##########################################
+# Ομαδοποίηση τελική ανά COMM
 final_comm_df = pop_crime_income_df.groupBy("COMM").agg(
     spark_sum("pop_2010").alias("total_population"),
     spark_sum("crime_count").alias("total_crimes"),
@@ -254,9 +226,7 @@ final_comm_df = final_comm_df.withColumn(
     when(col("total_population") > 0, col("total_crimes") / col("total_population"))
 )
 
-##########################################
-# 11) Προβολή Τελικού Αποτελέσματος
-##########################################
+# Προβολή Τελικού Αποτελέσματος
 final_comm_df.show(50, truncate=False)
 
 spark.stop()

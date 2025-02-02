@@ -48,12 +48,12 @@ crimes_schema = StructType([
 
 # Φόρτωση δεδομένων εγκλημάτων 
 crimes_df1 = spark.read.csv(
-    "../data/CrimeData/Crime_Data_from_2010_to_2019_20241101.csv",
+    "data/CrimeData/Crime_Data_from_2010_to_2019_20241101.csv",
     header=True,
     schema=crimes_schema
 )
 crimes_df2 = spark.read.csv(
-    "../data/CrimeData/Crime_Data_from_2020_to_Present_20241101.csv",
+    "data/CrimeData/Crime_Data_from_2020_to_Present_20241101.csv",
     header=True,
     schema=crimes_schema
 )

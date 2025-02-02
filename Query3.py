@@ -58,12 +58,12 @@ crimes_schema = StructType([
 
 # Φόρτωση δεδομένων 
 crimes_df1 = spark.read.csv(
-    "/mnt/F23209033208CE93/Ε.Μ.Π/Εξάμηνα/2024 Χειμερινό εξάμηνο/Προχωρημένα Θέματα Βάσεων Δεδομένων/εργασια/data/CrimeData/Crime_Data_from_2010_to_2019_20241101.csv",
+    "data/CrimeData/Crime_Data_from_2010_to_2019_20241101.csv",
     header=True,
     schema=crimes_schema
 )
 crimes_df2 = spark.read.csv(
-    "/mnt/F23209033208CE93/Ε.Μ.Π/Εξάμηνα/2024 Χειμερινό εξάμηνο/Προχωρημένα Θέματα Βάσεων Δεδομένων/εργασια/data/CrimeData/Crime_Data_from_2020_to_Present_20241101.csv",
+    "data/CrimeData/Crime_Data_from_2020_to_Present_20241101.csv",
     header=True,
     schema=crimes_schema
 )
@@ -85,7 +85,7 @@ crimes_geom_df = crimes_df.withColumn(
 
 # Φόρτωση 2010_Census_Blocks.geojson
 # Φιλτράρουμε CITY='Los Angeles'
-geojson_path = "/mnt/F23209033208CE93/Ε.Μ.Π/Εξάμηνα/2024 Χειμερινό εξάμηνο/Προχωρημένα Θέματα Βάσεων Δεδομένων/εργασια/data/2010_Census_Blocks.geojson"
+geojson_path = "data/2010_Census_Blocks.geojson"
 
 blocks_raw_df = (spark.read.format("geojson")
     .option("multiLine","true")
@@ -135,7 +135,7 @@ Estimated_Median_Income STRING
 income_df = (spark.read
     .option("header",True)
     .schema(income_schema)
-    .csv("/mnt/F23209033208CE93/Ε.Μ.Π/Εξάμηνα/2024 Χειμερινό εξάμηνο/Προχωρημένα Θέματα Βάσεων Δεδομένων/εργασια/data/LA_income_2015.csv")
+    .csv("data/LA_income_2015.csv")
 )
 
 income_df = income_df.withColumn(

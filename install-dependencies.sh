@@ -1,10 +1,9 @@
-#!/bin/bash
-set -e
-
 # 1) Ενημέρωση package lists και εγκατάσταση Java + Python 3 + pip (αν δεν υπάρχουν)
 echo "Updating apt and installing Java + Python3 + pip..."
 sudo apt-get update -y
 sudo apt-get install -y openjdk-11-jdk python3 python3-pip curl
+python3 -m venv ~/spark_env
+source ~/spark_env/bin/activate
 
 # 2) Δημιουργία φακέλου /jars για τα Sedona jars
 echo "Creating /jars directory for Sedona .jar files..."
